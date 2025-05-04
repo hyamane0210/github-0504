@@ -10,6 +10,11 @@ const TMDB_IMAGE_BASE_URL = "https://image.tmdb.org/t/p"
 // Initialize Spotify client with environment variables
 const SPOTIFY_CLIENT_ID = 'd605ccf114744dddaaabee21d3e9be70'
 const SPOTIFY_CLIENT_SECRET = '16757188b768471bb2b868e8f814fec0'
+const LASTFM_API_KEY = '13933c7cba0617cc35a4822319baa391'
+
+// Initialize LastFM client
+const LastFMClient = require('lastfm-node-client')
+const lastfm = new LastFMClient(LASTFM_API_KEY)
 
 // Initialize Spotify client
 const spotifyApi = new SpotifyWebApi({
@@ -80,8 +85,8 @@ async function getSpotifyToken(): Promise<void> {
 // Get Spotify artist image with improved error handling
 async function getSpotifyArtistImage(name: string): Promise<string | null> {
   try {
+    // Try Spotify first
     await getSpotifyToken()
-    
     const searchResult = await spotifyApi.searchArtists(name, { limit: 1 })
     
     if (searchResult.body.artists?.items.length > 0) {
@@ -90,9 +95,25 @@ async function getSpotifyArtistImage(name: string): Promise<string | null> {
         return artist.images[0].url
       }
     }
+
+    // If Spotify fails, try LastFM
+    try {
+      const result = await lastfm.artist.getInfo({ artist: name })
+      if (result?.artist?.image) {
+        const images = result.artist.image
+        // Get the largest image (last in the array)
+        const largeImage = images[images.length - 1]
+        if (largeImage['#text']) {
+          return largeImage['#text']
+        }
+      }
+    } catch (lastfmError) {
+      console.error("Error getting LastFM artist image:", lastfmError)
+    }
+    
     return null
   } catch (error) {
-    console.error("Error getting Spotify artist image:", error)
+    console.error("Error getting artist images:", error)
     return null
   }
 }
