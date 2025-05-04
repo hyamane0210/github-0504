@@ -98,12 +98,24 @@ async function getSpotifyArtistImage(name: string): Promise<string | null> {
 
     // If Spotify fails, try LastFM
     try {
-      const result = await lastfm.artist.getInfo({ artist: name })
+      const result = await lastfm.artist.getInfo({ 
+        artist: name,
+        autocorrect: 1
+      })
+      
+      // LastFMのレスポンスから最大サイズの画像URLを取得
       if (result?.artist?.image) {
-        const images = result.artist.image
-        // Get the largest image (last in the array)
-        const largeImage = images[images.length - 1]
-        if (largeImage['#text']) {
+        // Find mega or extralarge image
+        const megaImage = result.artist.image.find(img => img.size === 'mega')
+        const extralargeImage = result.artist.image.find(img => img.size === 'extralarge')
+        const largeImage = result.artist.image.find(img => img.size === 'large')
+        
+        // Return the largest available image
+        if (megaImage && megaImage['#text']) {
+          return megaImage['#text']
+        } else if (extralargeImage && extralargeImage['#text']) {
+          return extralargeImage['#text']
+        } else if (largeImage && largeImage['#text']) {
           return largeImage['#text']
         }
       }
