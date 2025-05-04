@@ -8,8 +8,8 @@ const TMDB_BASE_URL = "https://api.themoviedb.org/3"
 const TMDB_IMAGE_BASE_URL = "https://image.tmdb.org/t/p"
 
 // Initialize Spotify client with environment variables
-const SPOTIFY_CLIENT_ID = process.env.SPOTIFY_CLIENT_ID
-const SPOTIFY_CLIENT_SECRET = process.env.SPOTIFY_CLIENT_SECRET
+const SPOTIFY_CLIENT_ID = process.env.SPOTIFY_CLIENT_ID || 'd605ccf114744dddaaabee21d3e9be70'
+const SPOTIFY_CLIENT_SECRET = process.env.SPOTIFY_CLIENT_SECRET || '16757188b768471bb2b868e8f814fec0'
 
 // Initialize Spotify client
 const spotifyApi = new SpotifyWebApi({
