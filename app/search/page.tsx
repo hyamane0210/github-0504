@@ -102,7 +102,13 @@ export default function SearchPage() {
                 )}
               </Button>
             </div>
-            {error && <p className="text-sm text-red-500">{error}</p>}
+            {error && (
+        <Alert variant="destructive">
+          <AlertDescription>
+            {error}
+          </AlertDescription>
+        </Alert>
+      )}
           </form>
         </CardContent>
       </Card>

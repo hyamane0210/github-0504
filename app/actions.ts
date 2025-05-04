@@ -296,14 +296,7 @@ export async function getRecommendations(query: string) {
     }
   } catch (error) {
     console.error("Error fetching recommendations:", error)
-    // Return default items for each category on error
-    const defaultItems = Array(10).fill({
-      name: "推奨アイテム",
-      reason: "関連性のある推奨アイテムです",
-      features: ["特徴1", "特徴2", "特徴3"],
-      imageUrl: "/placeholder.svg?height=400&width=400",
-      officialUrl: "https://example.com",
-    })
+    throw new Error("APIキーが設定されていないか、リクエストに失敗しました。Secretsでの設定を確認してください。")
 
     return {
       artists: defaultItems,
