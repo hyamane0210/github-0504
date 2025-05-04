@@ -54,30 +54,27 @@ async function getWikipediaImage(name: string): Promise<string | null> {
 
 // Get Spotify token with exponential backoff
 async function getSpotifyToken(): Promise<void> {
-  const now = Date.now()
+  try {
+    const now = Date.now()
 
-  // Check if token is still valid
-  if (now < spotifyTokenExpirationTime && spotifyApi.getAccessToken()) {
-    return
-  }
-
-  // Reset token promise if there was an error
-  if (tokenRefreshPromise) {
-    try {
-      await tokenRefreshPromise
+    if (now < spotifyTokenExpirationTime && spotifyApi.getAccessToken()) {
       return
-    } catch (error) {
-      console.error("Token refresh failed:", error)
-      tokenRefreshPromise = null
-      spotifyTokenExpirationTime = 0
     }
+
+    const data = await spotifyApi.clientCredentialsGrant()
+    const accessToken = data.body["access_token"]
+    
+    if (!accessToken) {
+      throw new Error("No access token received")
+    }
+
+    spotifyTokenExpirationTime = now + (data.body["expires_in"] - 60) * 1000
+    spotifyApi.setAccessToken(accessToken)
+  } catch (error) {
+    console.error("Failed to get Spotify token:", error)
+    throw error
   }
-
-  // Set credentials before requesting token
-  spotifyApi.setClientId(SPOTIFY_CLIENT_ID)
-  spotifyApi.setClientSecret(SPOTIFY_CLIENT_SECRET)
-
-  tokenRefreshPromise = backOff(
+}
     async () => {
       const data = await spotifyApi.clientCredentialsGrant()
       const accessToken = data.body["access_token"]
@@ -156,22 +153,24 @@ async function getTMDBImage(name: string, type: "person" | "media"): Promise<str
 // Get artist image (Spotify → TMDB → Wikipedia → Default)
 async function getArtistImage(name: string): Promise<string | null> {
   try {
-    // 1. Try Spotify
-    const spotifyImage = await getSpotifyArtistImage(name)
-    if (spotifyImage) return spotifyImage
+    // Parallel requests for better performance
+    const [spotifyImage, tmdbImage, wikiImage] = await Promise.allSettled([
+      getSpotifyArtistImage(name),
+      getTMDBImage(name, "person"),
+      getWikipediaImage(name)
+    ])
 
-    // 2. Try TMDB
-    const tmdbImage = await getTMDBImage(name, "person")
-    if (tmdbImage) return tmdbImage
+    // Use the first successful result
+    if (spotifyImage.status === 'fulfilled' && spotifyImage.value) return spotifyImage.value
+    if (tmdbImage.status === 'fulfilled' && tmdbImage.value) return tmdbImage.value
+    if (wikiImage.status === 'fulfilled' && wikiImage.value) return wikiImage.value
 
-    // 3. Try Wikipedia
-    const wikiImage = await getWikipediaImage(name)
-    if (wikiImage) return wikiImage
-
-    // 4. Default image
     return "/placeholder.svg?height=400&width=400"
   } catch (error) {
     console.error("Error getting artist image:", error)
+    if (error instanceof Error) {
+      throw new Error(`画像の取得に失敗しました: ${error.message}`)
+    }
     return "/placeholder.svg?height=400&width=400"
   }
 }
