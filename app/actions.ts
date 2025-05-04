@@ -15,6 +15,7 @@ const SPOTIFY_CLIENT_SECRET = '16757188b768471bb2b868e8f814fec0'
 const spotifyApi = new SpotifyWebApi({
   clientId: SPOTIFY_CLIENT_ID,
   clientSecret: SPOTIFY_CLIENT_SECRET,
+  redirectUri: 'http://localhost:3000'
 })
 
 let spotifyTokenExpirationTime = 0
@@ -54,41 +55,27 @@ async function getWikipediaImage(name: string): Promise<string | null> {
 
 // Get Spotify token with exponential backoff
 async function getSpotifyToken(): Promise<void> {
-  const now = Date.now()
+  try {
+    const now = Date.now()
 
-  if (now < spotifyTokenExpirationTime && spotifyApi.getAccessToken()) {
-    return
-  }
-
-  if (tokenRefreshPromise) {
-    try {
-      await tokenRefreshPromise
+    if (now < spotifyTokenExpirationTime && spotifyApi.getAccessToken()) {
       return
-    } catch (error) {
-      tokenRefreshPromise = null
     }
-  }
 
-  tokenRefreshPromise = backOff(
-    async () => {
-      const data = await spotifyApi.clientCredentialsGrant()
-      const accessToken = data.body["access_token"]
-      
-      if (!accessToken) {
-        throw new Error("No access token received")
-      }
-
-      spotifyTokenExpirationTime = now + (data.body["expires_in"] - 60) * 1000
-      spotifyApi.setAccessToken(accessToken)
-    },
-    {
-      numOfAttempts: MAX_TOKEN_RETRIES,
-      startingDelay: TOKEN_RETRY_DELAY,
-      timeMultiple: 2,
-      jitter: 'full'
+    const data = await spotifyApi.clientCredentialsGrant()
+    const accessToken = data.body["access_token"]
+    
+    if (!accessToken) {
+      throw new Error("No access token received")
     }
-  ).catch(error => {
+
+    spotifyTokenExpirationTime = now + (data.body["expires_in"] - 60) * 1000
+    spotifyApi.setAccessToken(accessToken)
+  } catch (error) {
     console.error("Failed to get Spotify token:", error)
+    throw error
+  }
+}
     throw error
   })
 
