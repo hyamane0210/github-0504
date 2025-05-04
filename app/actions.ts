@@ -55,13 +55,13 @@ async function getWikipediaImage(name: string): Promise<string | null> {
 
 // Get Spotify token with exponential backoff
 async function getSpotifyToken(): Promise<void> {
+  const now = Date.now()
+
+  if (now < spotifyTokenExpirationTime && spotifyApi.getAccessToken()) {
+    return
+  }
+
   try {
-    const now = Date.now()
-
-    if (now < spotifyTokenExpirationTime && spotifyApi.getAccessToken()) {
-      return
-    }
-
     const data = await spotifyApi.clientCredentialsGrant()
     const accessToken = data.body["access_token"]
     
@@ -75,11 +75,6 @@ async function getSpotifyToken(): Promise<void> {
     console.error("Failed to get Spotify token:", error)
     throw error
   }
-}
-    throw error
-  })
-
-  await tokenRefreshPromise
 }
 
 // Get Spotify artist image with improved error handling
