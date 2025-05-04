@@ -3,13 +3,13 @@ import SpotifyWebApi from "spotify-web-api-node"
 import OpenAI from "openai"
 import { backOff } from "exponential-backoff"
 
-const TMDB_API_KEY = process.env.TMDB_API_KEY
+const TMDB_API_KEY = '54e195c2638c743569208621cccf44fc'
 const TMDB_BASE_URL = "https://api.themoviedb.org/3"
 const TMDB_IMAGE_BASE_URL = "https://image.tmdb.org/t/p"
 
 // Initialize Spotify client with environment variables
-const SPOTIFY_CLIENT_ID = process.env.SPOTIFY_CLIENT_ID || 'd605ccf114744dddaaabee21d3e9be70'
-const SPOTIFY_CLIENT_SECRET = process.env.SPOTIFY_CLIENT_SECRET || '16757188b768471bb2b868e8f814fec0'
+const SPOTIFY_CLIENT_ID = 'd605ccf114744dddaaabee21d3e9be70'
+const SPOTIFY_CLIENT_SECRET = '16757188b768471bb2b868e8f814fec0'
 
 // Initialize Spotify client
 const spotifyApi = new SpotifyWebApi({
@@ -56,18 +56,26 @@ async function getWikipediaImage(name: string): Promise<string | null> {
 async function getSpotifyToken(): Promise<void> {
   const now = Date.now()
 
+  // Check if token is still valid
   if (now < spotifyTokenExpirationTime && spotifyApi.getAccessToken()) {
     return
   }
 
+  // Reset token promise if there was an error
   if (tokenRefreshPromise) {
     try {
       await tokenRefreshPromise
       return
     } catch (error) {
+      console.error("Token refresh failed:", error)
       tokenRefreshPromise = null
+      spotifyTokenExpirationTime = 0
     }
   }
+
+  // Set credentials before requesting token
+  spotifyApi.setClientId(SPOTIFY_CLIENT_ID)
+  spotifyApi.setClientSecret(SPOTIFY_CLIENT_SECRET)
 
   tokenRefreshPromise = backOff(
     async () => {
