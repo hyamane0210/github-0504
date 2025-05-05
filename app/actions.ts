@@ -30,72 +30,21 @@ const isValidImageUrl = (url: string): boolean => {
 
 // Initialize Spotify client
 const spotifyApi = new SpotifyWebApi({
-  clientId: SPOTIFY_CLIENT_ID,
-  clientSecret: SPOTIFY_CLIENT_SECRET,
-  redirectUri: 'http://localhost:3000'
+  clientId: process.env.NEXT_PUBLIC_SPOTIFY_CLIENT_ID
 })
 
-let spotifyTokenExpirationTime = 0
-let tokenRetryCount = 0
-const MAX_TOKEN_RETRIES = 3
-const TOKEN_RETRY_DELAY = 1000 // 1 second delay between retries
-let tokenRefreshPromise: Promise<void> | null = null // For preventing concurrent token refreshes
-
-// Get Wikipedia image
-async function getWikipediaImage(name: string): Promise<string | null> {
-  try {
-    // Search for article
-    const searchResponse = await fetch(
-      `https://ja.wikipedia.org/w/api.php?action=query&format=json&list=search&srsearch=${encodeURIComponent(
-        name,
-      )}&origin=*`,
-    )
-    const searchData = await searchResponse.json()
-    if (!searchData.query?.search?.[0]?.pageid) {
-      return null
-    }
-
-    // Get article info
-    const pageId = searchData.query.search[0].pageid
-    const imageResponse = await fetch(
-      `https://ja.wikipedia.org/w/api.php?action=query&format=json&prop=pageimages&pithumbsize=500&pageids=${pageId}&origin=*`,
-    )
-    const imageData = await imageResponse.json()
-    const thumbnail = imageData.query?.pages?.[pageId]?.thumbnail?.source
-
-    return thumbnail || null
-  } catch (error) {
-    console.error("Error getting Wikipedia image:", error)
-    return null
-  }
-}
-
-// Get Spotify token with exponential backoff
 async function getSpotifyToken(): Promise<void> {
-  const now = Date.now()
-
-  if (now < spotifyTokenExpirationTime && spotifyApi.getAccessToken()) {
-    console.debug("[Spotify] Using existing token")
-    return
-  }
-
   try {
-    console.debug("[Spotify] Requesting new token...")
-    const data = await spotifyApi.clientCredentialsGrant()
-    const accessToken = data.body["access_token"]
-    
-    if (!accessToken) {
-      throw new Error("No access token received")
+    const response = await fetch('/api/spotify')
+    const data = await response.json()
+
+    if (!data.token) {
+      throw new Error('Failed to get Spotify token')
     }
 
-    console.debug("[Spotify] New token received successfully")
-    spotifyTokenExpirationTime = now + (data.body["expires_in"] - 60) * 1000
-    spotifyApi.setAccessToken(accessToken)
+    spotifyApi.setAccessToken(data.token)
   } catch (error) {
     console.error("[Spotify] Failed to get token:", error)
-    if (error instanceof Error) {
-      console.error("[Spotify] Error details:", error.message)
-    }
     throw error
   }
 }
@@ -106,23 +55,23 @@ async function getSpotifyArtistImage(name: string): Promise<string | null> {
     // Try Spotify first
     await getSpotifyToken()
     console.debug(`[Spotify] Searching for artist: ${name}`)
-    
+
     const searchResult = await spotifyApi.searchArtists(name, { limit: 1 })
     console.debug(`[Spotify] Search response:`, JSON.stringify(searchResult.body, null, 2))
-    
+
     if (searchResult?.body?.artists?.items?.[0]) {
       const artist = searchResult.body.artists.items[0]
       console.debug(`[Spotify] Found artist:`, artist.name)
-      
+
       if (!artist.images || artist.images.length === 0) {
         console.debug(`[Spotify] No images found for artist: ${artist.name}`)
         return null
       }
-      
+
       // Sort images by size and find the first valid URL
       const sortedImages = [...artist.images].sort((a, b) => (b.width || 0) - (a.width || 0))
       const artistImage = sortedImages.find(img => isValidImageUrl(img.url))
-      
+
       if (artistImage) {
         console.debug(`[Spotify] Found image for ${name}:`, artistImage.url)
         return artistImage.url
@@ -141,7 +90,7 @@ async function getSpotifyArtistImage(name: string): Promise<string | null> {
         autocorrect: 1,
         api_key: LASTFM_API_KEY
       })
-      
+
       // LastFMの画像を優先順位に従って取得
       if (result?.artist?.image) {
         const sizePreference = ['large', 'medium', 'extralarge']
@@ -151,7 +100,7 @@ async function getSpotifyArtistImage(name: string): Promise<string | null> {
             img['#text'] && 
             isValidImageUrl(img['#text'])
           )
-          
+
           if (image) {
             console.debug(`[LastFM] Found ${size} image for ${name}:`, image['#text'])
             return image['#text']
@@ -161,7 +110,7 @@ async function getSpotifyArtistImage(name: string): Promise<string | null> {
     } catch (lastfmError) {
       console.error("Error getting LastFM artist image:", lastfmError)
     }
-    
+
     return null
   } catch (error) {
     console.error("Error getting artist images:", error)
@@ -281,6 +230,35 @@ async function getFashionImage(name: string): Promise<string | null> {
 const CACHE_DURATION = 1000 * 60 * 60 // 1 hour
 const imageCache = new Map<string, { url: string; timestamp: number }>()
 
+// Get Wikipedia image
+async function getWikipediaImage(name: string): Promise<string | null> {
+  try {
+    // Search for article
+    const searchResponse = await fetch(
+      `https://ja.wikipedia.org/w/api.php?action=query&format=json&list=search&srsearch=${encodeURIComponent(
+        name,
+      )}&origin=*`,
+    )
+    const searchData = await searchResponse.json()
+    if (!searchData.query?.search?.[0]?.pageid) {
+      return null
+    }
+
+    // Get article info
+    const pageId = searchData.query.search[0].pageid
+    const imageResponse = await fetch(
+      `https://ja.wikipedia.org/w/api.php?action=query&format=json&prop=pageimages&pithumbsize=500&pageids=${pageId}&origin=*`,
+    )
+    const imageData = await imageResponse.json()
+    const thumbnail = imageData.query?.pages?.[pageId]?.thumbnail?.source
+
+    return thumbnail || null
+  } catch (error) {
+    console.error("Error getting Wikipedia image:", error)
+    return null
+  }
+}
+
 // Get recommendations
 export async function getRecommendations(query: string) {
   try {
@@ -306,7 +284,7 @@ export async function getRecommendations(query: string) {
       baseUrl: string
     ) => {
       const processed: (T & { imageUrl: string; officialUrl: string })[] = []
-      
+
       for (let i = 0; i < items.length; i += batchSize) {
         const batch = items.slice(i, i + batchSize)
         const batchResults = await Promise.all(
@@ -314,7 +292,7 @@ export async function getRecommendations(query: string) {
             // Check cache first
             const cacheKey = `${item.name}-${getImage.name}`
             const cached = imageCache.get(cacheKey)
-            
+
             let imageUrl: string
             if (cached && Date.now() - cached.timestamp < CACHE_DURATION) {
               imageUrl = cached.url
@@ -332,7 +310,7 @@ export async function getRecommendations(query: string) {
         )
         processed.push(...batchResults)
       }
-      
+
       return processed
     }
 
@@ -389,3 +367,9 @@ async function getRelatedItems(query: string, category: string) {
     })
   }
 }
+
+const defaultItems = Array(10).fill({
+  name: "推奨アイテム",
+  reason: "関連性のある推奨アイテムです",
+  features: ["特徴1", "特徴2", "特徴3"],
+})
