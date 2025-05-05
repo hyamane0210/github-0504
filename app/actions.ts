@@ -317,6 +317,16 @@ export async function getRecommendations(query: string) {
     ])
 
     return {
+      artists: processedArtists,
+      celebrities: processedCelebrities,
+      media: processedMedia,
+      fashion: processedFashion,
+    }
+  } catch (error) {
+    console.error("Error fetching recommendations:", error)
+    throw new Error("APIキーが設定されていないか、リクエストに失敗しました。Secretsでの設定を確認してください。")
+  }
+}
 
 // Get anime image (TMDB → Wikipedia → Default)
 async function getAnimeImage(name: string): Promise<string | null> {
