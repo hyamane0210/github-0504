@@ -12,25 +12,6 @@ import dynamic from "next/dynamic"
 import type { RecommendationItem } from "@/components/recommendations"
 
 // 動的インポートで遅延読み込み
-
-// 先行読み込み用のキャッシュ
-const preloadCache = new Map<string, Promise<any>>()
-
-function preloadRecommendations(query: string) {
-  if (!preloadCache.has(query)) {
-    preloadCache.set(query, fetch(`/api/recommendations?q=${encodeURIComponent(query)}`).then(res => res.json()))
-  }
-  return preloadCache.get(query)!
-}
-
-// ユーザーの行動に基づいて先行読み込みを実行
-useEffect(() => {
-  if (recommendations[activeTab].length > 0) {
-    const nextTab = getNextTab(activeTab)
-    preloadRecommendations(nextTab)
-  }
-}, [activeTab, recommendations])
-
 const RecommendedItems = dynamic(() => import("@/components/recommended-items").then((mod) => mod.RecommendedItems), {
   loading: () => (
     <div className="flex justify-center py-8">
