@@ -110,11 +110,11 @@ async function getTMDBImage(name: string, type: "person" | "media"): Promise<str
     const response = await fetch(
       `/api/tmdb?type=${type}&query=${encodeURIComponent(name)}`
     )
-    
+
     if (!response.ok) {
       throw new Error(`TMDB API error: ${response.status}`)
     }
-    
+
     const data = await response.json()
     if (!data.results?.length) {
       return null
@@ -122,7 +122,7 @@ async function getTMDBImage(name: string, type: "person" | "media"): Promise<str
 
     const result = data.results[0]
     const imagePath = type === "person" ? result.profile_path : result.poster_path
-    
+
     if (!imagePath) {
       return null
     }
@@ -312,7 +312,7 @@ export async function getRecommendations(query: string) {
     const [processedArtists, processedCelebrities, processedMedia, processedFashion] = await Promise.all([
       processItems(limitedArtists, getArtistImage, "https://open.spotify.com/search/"),
       processItems(limitedCelebrities, getPersonImage, "https://www.themoviedb.org/search?query="),
-      processItems(limitedMedia, getMediaImage, "https://www.themoviedb.org/search?query="),
+      processItems(limitedMedia, getMovieImage, "https://www.themoviedb.org/search?query="),
       processItems(limitedFashion, getFashionImage, "https://www.google.com/search?q="),
     ])
 
@@ -325,51 +325,6 @@ export async function getRecommendations(query: string) {
   } catch (error) {
     console.error("Error fetching recommendations:", error)
     throw new Error("APIキーが設定されていないか、リクエストに失敗しました。Secretsでの設定を確認してください。")
-  }
-}
-
-// Get anime image (TMDB → Wikipedia → Default)
-async function getAnimeImage(name: string): Promise<string | null> {
-  try {
-    // Try TMDB with specific anime type
-    const response = await fetch(`/api/tmdb?type=anime&query=${encodeURIComponent(name)}`)
-    if (response.ok) {
-      const data = await response.json()
-      const animeResult = data.results?.find((item: any) => 
-        item.media_type === 'tv' || item.media_type === 'movie'
-      )
-      
-      if (animeResult?.poster_path) {
-        return `${TMDB_IMAGE_BASE_URL}/${TMDB_IMAGE_SIZE}${animeResult.poster_path}`
-      }
-    }
-
-    // Try Wikipedia with anime validation
-    const wikiImage = await getWikipediaImage(name, ['アニメ', 'テレビアニメ', '劇場アニメ'])
-    if (wikiImage) return wikiImage
-
-    return "/placeholder.svg?height=400&width=400"
-  } catch (error) {
-    console.error("Error getting anime image:", error)
-    return "/placeholder.svg?height=400&width=400"
-  }
-}
-
-      artists: processedArtists,
-      celebrities: processedCelebrities,
-      media: processedMedia,
-      fashion: processedFashion,
-    }
-  } catch (error) {
-    console.error("Error fetching recommendations:", error)
-    throw new Error("APIキーが設定されていないか、リクエストに失敗しました。Secretsでの設定を確認してください。")
-
-    return {
-      artists: defaultItems,
-      celebrities: defaultItems,
-      media: defaultItems,
-      fashion: defaultItems,
-    }
   }
 }
 
@@ -405,3 +360,30 @@ const defaultItems = Array(10).fill({
   reason: "関連性のある推奨アイテムです",
   features: ["特徴1", "特徴2", "特徴3"],
 })
+
+// Get anime image (TMDB → Wikipedia → Default)
+async function getAnimeImage(name: string): Promise<string | null> {
+  try {
+    // Try TMDB with specific anime type
+    const response = await fetch(`/api/tmdb?type=anime&query=${encodeURIComponent(name)}`)
+    if (response.ok) {
+      const data = await response.json()
+      const animeResult = data.results?.find((item: any) => 
+        item.media_type === 'tv' || item.media_type === 'movie'
+      )
+
+      if (animeResult?.poster_path) {
+        return `${TMDB_IMAGE_BASE_URL}/${TMDB_IMAGE_SIZE}${animeResult.poster_path}`
+      }
+    }
+
+    // Try Wikipedia with anime validation
+    const wikiImage = await getWikipediaImage(name)
+    if (wikiImage) return wikiImage
+
+    return "/placeholder.svg?height=400&width=400"
+  } catch (error) {
+    console.error("Error getting anime image:", error)
+    return "/placeholder.svg?height=400&width=400"
+  }
+}
