@@ -106,30 +106,33 @@ async function getSpotifyArtistImage(name: string): Promise<string | null> {
 
 // Get TMDB image
 async function getTMDBImage(name: string, type: "person" | "media"): Promise<string | null> {
-  if (!TMDB_API_KEY) {
-    console.error("TMDB API key is not configured")
-    return null
-  }
-
   try {
-    const endpoint = type === "person" ? "person" : "multi"
     const response = await fetch(
       `/api/tmdb?type=${type}&query=${encodeURIComponent(name)}`
     )
+    
     if (!response.ok) {
       throw new Error(`TMDB API error: ${response.status}`)
     }
+    
     const data = await response.json()
-    const result = data.results[0]
-    if (result) {
-      const imagePath = type === "person" ? result.profile_path : result.poster_path
-      if (imagePath) {
-        return `${TMDB_IMAGE_BASE_URL}/${TMDB_IMAGE_SIZE}${imagePath}`
-      }
+    if (!data.results?.length) {
+      return null
     }
-    return null
+
+    const result = data.results[0]
+    const imagePath = type === "person" ? result.profile_path : result.poster_path
+    
+    if (!imagePath) {
+      return null
+    }
+
+    return `${TMDB_IMAGE_BASE_URL}/${TMDB_IMAGE_SIZE}${imagePath}`
   } catch (error) {
     console.error("Error getting TMDB image:", error)
+    if (error instanceof Error) {
+      console.error(error.message)
+    }
     return null
   }
 }

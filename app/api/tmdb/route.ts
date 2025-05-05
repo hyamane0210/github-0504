@@ -20,13 +20,29 @@ export async function GET(request: Request) {
     )
     
     if (!response.ok) {
-      throw new Error(`TMDB API error: ${response.status}`)
+      const errorData = await response.json().catch(() => ({}))
+      console.error('TMDB API error:', {
+        status: response.status,
+        statusText: response.statusText,
+        error: errorData
+      })
+      return NextResponse.json({ 
+        error: 'Failed to fetch from TMDB',
+        details: response.statusText 
+      }, { status: response.status })
     }
     
     const data = await response.json()
+    if (!data.results?.length) {
+      return NextResponse.json({ results: [] })
+    }
+    
     return NextResponse.json(data)
   } catch (error) {
     console.error('TMDB API error:', error)
-    return NextResponse.json({ error: 'Failed to fetch from TMDB' }, { status: 500 })
+    return NextResponse.json({ 
+      error: 'Internal server error',
+      details: error instanceof Error ? error.message : 'Unknown error'
+    }, { status: 500 })
   }
 }
