@@ -34,7 +34,8 @@ type CategoryMapping = {
 const categoryTitles: CategoryMapping = {
   artists: "アーティスト",
   celebrities: "芸能人/インフルエンサー",
-  media: "映画/アニメ",
+  movies: "映画",
+  anime: "アニメ",
   fashion: "ファッションブランド",
 }
 
