@@ -6,6 +6,7 @@ import { backOff } from "exponential-backoff"
 const TMDB_API_KEY = '54e195c2638c743569208621cccf44fc'
 const TMDB_BASE_URL = "https://api.themoviedb.org/3"
 const TMDB_IMAGE_BASE_URL = "https://image.tmdb.org/t/p"
+const TMDB_IMAGE_SIZE = "w342" // Changed from w500 for better performance
 
 // Initialize Spotify client with environment variables
 const SPOTIFY_CLIENT_ID = 'd605ccf114744dddaaabee21d3e9be70'
@@ -15,6 +16,17 @@ const LASTFM_API_KEY = '13933c7cba0617cc35a4822319baa391'
 // Initialize LastFM client
 const LastFMClient = require('lastfm-node-client')
 const lastfm = new LastFMClient(LASTFM_API_KEY)
+
+// Validate image URL
+const isValidImageUrl = (url: string): boolean => {
+  if (!url) return false
+  try {
+    const urlObj = new URL(url)
+    return urlObj.protocol === 'http:' || urlObj.protocol === 'https:'
+  } catch {
+    return false
+  }
+}
 
 // Initialize Spotify client
 const spotifyApi = new SpotifyWebApi({
@@ -89,34 +101,38 @@ async function getSpotifyArtistImage(name: string): Promise<string | null> {
     await getSpotifyToken()
     const searchResult = await spotifyApi.searchArtists(name, { limit: 1 })
     
-    if (searchResult.body.artists?.items.length > 0) {
+    if (searchResult?.body?.artists?.items?.[0]) {
       const artist = searchResult.body.artists.items[0]
-      if (artist.images && artist.images.length > 0) {
-        return artist.images[0].url
+      const artistImage = artist.images?.find(img => isValidImageUrl(img.url))
+      if (artistImage) {
+        console.debug(`[Spotify] Found image for ${name}:`, artistImage.url)
+        return artistImage.url
       }
     }
 
     // If Spotify fails, try LastFM
     try {
+      console.debug(`[LastFM] Searching for ${name}`)
       const result = await lastfm.artist.getInfo({ 
         artist: name,
-        autocorrect: 1
+        autocorrect: 1,
+        api_key: LASTFM_API_KEY
       })
       
-      // LastFMのレスポンスから最大サイズの画像URLを取得
+      // LastFMの画像を優先順位に従って取得
       if (result?.artist?.image) {
-        // Find mega or extralarge image
-        const megaImage = result.artist.image.find(img => img.size === 'mega')
-        const extralargeImage = result.artist.image.find(img => img.size === 'extralarge')
-        const largeImage = result.artist.image.find(img => img.size === 'large')
-        
-        // Return the largest available image
-        if (megaImage && megaImage['#text']) {
-          return megaImage['#text']
-        } else if (extralargeImage && extralargeImage['#text']) {
-          return extralargeImage['#text']
-        } else if (largeImage && largeImage['#text']) {
-          return largeImage['#text']
+        const sizePreference = ['large', 'medium', 'extralarge']
+        for (const size of sizePreference) {
+          const image = result.artist.image.find(img => 
+            img.size === size && 
+            img['#text'] && 
+            isValidImageUrl(img['#text'])
+          )
+          
+          if (image) {
+            console.debug(`[LastFM] Found ${size} image for ${name}:`, image['#text'])
+            return image['#text']
+          }
         }
       }
     } catch (lastfmError) {
@@ -150,7 +166,7 @@ async function getTMDBImage(name: string, type: "person" | "media"): Promise<str
     if (result) {
       const imagePath = type === "person" ? result.profile_path : result.poster_path
       if (imagePath) {
-        return `${TMDB_IMAGE_BASE_URL}/w500${imagePath}`
+        return `${TMDB_IMAGE_BASE_URL}/${TMDB_IMAGE_SIZE}${imagePath}`
       }
     }
     return null
