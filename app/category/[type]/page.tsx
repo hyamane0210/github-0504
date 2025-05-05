@@ -26,7 +26,7 @@ const categoryMap: Record<string, keyof RecommendationsData> = {
   fashion: "fashion",
 }
 
-const categoryTitles: Record<string, string> = {
+const categoryTitles: Record<CategoryType, string> = {
   artists: "アーティスト",
   celebrities: "芸能人/インフルエンサー",
   movies: "映画",

@@ -15,6 +15,8 @@ export interface RecommendationsData {
   fashion: RecommendationItem[]
 }
 
+export type CategoryType = "artists" | "celebrities" | "movies" | "anime" | "fashion"
+
 export type CategoryMapping = {
   artists: string
   celebrities: string

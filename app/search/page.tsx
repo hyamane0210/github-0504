@@ -6,7 +6,6 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent } from "@/components/ui/card"
 import { getRecommendations } from "@/app/actions"
-import { Recommendations } from "@/components/recommendations"
 import { Loader2, SearchIcon, History, Sparkles } from "lucide-react"
 import { FanIcon as FavoriteIcon, Search } from "lucide-react"
 import Link from "next/link"
@@ -103,12 +102,10 @@ export default function SearchPage() {
               </Button>
             </div>
             {error && (
-        <Alert variant="destructive">
-          <AlertDescription>
-            {error}
-          </AlertDescription>
-        </Alert>
-      )}
+              <div className="text-red-500 text-sm mt-2"> {/* Added error display */}
+                {error}
+              </div>
+            )}
           </form>
         </CardContent>
       </Card>
