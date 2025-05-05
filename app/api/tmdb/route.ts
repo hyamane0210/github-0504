@@ -16,7 +16,7 @@ export async function GET(request: Request) {
     let endpoint = "person"
     let additionalParams = "&include_adult=false"
 
-    if (type === "movie") {
+    if (type === "media") {
       endpoint = "movie"
     } else if (type === "anime") {
       endpoint = "tv"
