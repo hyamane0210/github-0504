@@ -257,17 +257,19 @@ async function getWikipediaImage(name: string): Promise<string | null> {
 export async function getRecommendations(query: string) {
   try {
     // Get related items for each category using OpenAI
-    const [artists, celebrities, media, fashion] = await Promise.all([
+    const [artists, celebrities, movies, anime, fashion] = await Promise.all([
       getRelatedItems(query, "音楽アーティスト"),
       getRelatedItems(query, "芸能人/インフルエンサー"),
-      getRelatedItems(query, "映画/アニメ作品"),
+      getRelatedItems(query, "映画作品"),
+      getRelatedItems(query, "アニメ作品"),
       getRelatedItems(query, "ファッションブランド"),
     ])
 
     // Limit each category to 10 items
     const limitedArtists = artists.slice(0, 10)
     const limitedCelebrities = celebrities.slice(0, 10)
-    const limitedMedia = media.slice(0, 10)
+    const limitedMovies = movies.slice(0, 10)
+    const limitedAnime = anime.slice(0, 10)
     const limitedFashion = fashion.slice(0, 10)
 
     // Process items in batches to prevent too many concurrent requests
@@ -309,17 +311,19 @@ export async function getRecommendations(query: string) {
     }
 
     // Process each category with optimized batch processing
-    const [processedArtists, processedCelebrities, processedMedia, processedFashion] = await Promise.all([
+    const [processedArtists, processedCelebrities, processedMovies, processedAnime, processedFashion] = await Promise.all([
       processItems(limitedArtists, getArtistImage, "https://open.spotify.com/search/"),
       processItems(limitedCelebrities, getPersonImage, "https://www.themoviedb.org/search?query="),
-      processItems(limitedMedia, getMovieImage, "https://www.themoviedb.org/search?query="),
+      processItems(limitedMovies, getMovieImage, "https://www.themoviedb.org/search?query="),
+      processItems(limitedAnime, getAnimeImage, "https://www.themoviedb.org/search?query="),
       processItems(limitedFashion, getFashionImage, "https://www.google.com/search?q="),
     ])
 
     return {
       artists: processedArtists,
       celebrities: processedCelebrities,
-      media: processedMedia,
+      movies: processedMovies,
+      anime: processedAnime,
       fashion: processedFashion,
     }
   } catch (error) {

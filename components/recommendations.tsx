@@ -19,7 +19,8 @@ export type RecommendationItem = {
 export type RecommendationsData = {
   artists: RecommendationItem[]
   celebrities: RecommendationItem[]
-  media: RecommendationItem[]
+  movies: RecommendationItem[]
+  anime: RecommendationItem[]
   fashion: RecommendationItem[]
 }
 
