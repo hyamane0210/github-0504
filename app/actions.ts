@@ -3,19 +3,8 @@ import SpotifyWebApi from "spotify-web-api-node"
 import OpenAI from "openai"
 import { backOff } from "exponential-backoff"
 
-const TMDB_API_KEY = '54e195c2638c743569208621cccf44fc'
-const TMDB_BASE_URL = "https://api.themoviedb.org/3"
 const TMDB_IMAGE_BASE_URL = "https://image.tmdb.org/t/p"
 const TMDB_IMAGE_SIZE = "w342" // Changed from w500 for better performance
-
-// Initialize Spotify client with environment variables
-const SPOTIFY_CLIENT_ID = 'd605ccf114744dddaaabee21d3e9be70'
-const SPOTIFY_CLIENT_SECRET = '16757188b768471bb2b868e8f814fec0'
-const LASTFM_API_KEY = '13933c7cba0617cc35a4822319baa391'
-
-// Initialize LastFM client
-const LastFMClient = require('lastfm-node-client')
-const lastfm = new LastFMClient(LASTFM_API_KEY)
 
 // Validate image URL
 const isValidImageUrl = (url: string): boolean => {
@@ -85,11 +74,8 @@ async function getSpotifyArtistImage(name: string): Promise<string | null> {
     // If Spotify fails, try LastFM
     try {
       console.debug(`[LastFM] Searching for ${name}`)
-      const result = await lastfm.artist.getInfo({ 
-        artist: name,
-        autocorrect: 1,
-        api_key: LASTFM_API_KEY
-      })
+      const response = await fetch(`/api/lastfm?artist=${encodeURIComponent(name)}`)
+      const result = await response.json()
 
       // LastFMの画像を優先順位に従って取得
       if (result?.artist?.image) {
@@ -128,7 +114,7 @@ async function getTMDBImage(name: string, type: "person" | "media"): Promise<str
   try {
     const endpoint = type === "person" ? "person" : "multi"
     const response = await fetch(
-      `${TMDB_BASE_URL}/search/${endpoint}?api_key=${TMDB_API_KEY}&query=${encodeURIComponent(name)}&language=ja-JP`,
+      `/api/tmdb?type=${type}&query=${encodeURIComponent(name)}`
     )
     if (!response.ok) {
       throw new Error(`TMDB API error: ${response.status}`)
