@@ -24,14 +24,16 @@ const RecommendedItems = dynamic(() => import("@/components/recommended-items").
 // キーワードデータをメモ化
 const recommendedKeywords = {
   artists: ["米津玄師", "BTS", "テイラー・スウィフト", "ブルーノ・マーズ"],
-  media: ["鬼滅の刃", "千と千尋の神隠し", "進撃の巨人", "ストレンジャー・シングス"],
+  movies: ["インターステラー", "アベンジャーズ", "タイタニック", "ショーシャンクの空に"],
+  anime: ["鬼滅の刃", "千と千尋の神隠し", "進撃の巨人", "NARUTO"],
   fashion: ["ナイキ", "ユニクロ", "グッチ", "ザラ"],
   celebrities: ["ゼンデイヤ", "トム・ホランド", "菅田将暉", "新垣結衣"],
 }
 
 const trendingKeywords = {
   artists: ["NewJeans", "Billie Eilish", "Olivia Rodrigo", "YOASOBI"],
-  media: ["推しの子", "SPY×FAMILY", "ジョジョの奇妙な冒険", "ワンピース"],
+  movies: ["オッペンハイマー", "バービー", "ゴジラxコング", "トップガン"],
+  anime: ["推しの子", "SPY×FAMILY", "ジョジョの奇妙な冒険", "ワンピース"],
   fashion: ["ZARA", "H&M", "UNIQLO", "Supreme"],
   celebrities: ["小松菜奈", "山田裕貴", "浜辺美波", "北村匠海"],
 }
@@ -261,14 +263,18 @@ export default function RecommendedPage() {
         </Alert>
       ) : (
         <Tabs defaultValue={activeTab} value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="grid grid-cols-4 w-full">
+          <TabsList className="grid grid-cols-5 w-full">
             <TabsTrigger value="artists" className="flex items-center">
               <Music className="h-4 w-4 mr-2" />
               アーティスト
             </TabsTrigger>
-            <TabsTrigger value="media" className="flex items-center">
+            <TabsTrigger value="movies" className="flex items-center">
               <Film className="h-4 w-4 mr-2" />
-              映画/アニメ
+              映画
+            </TabsTrigger>
+            <TabsTrigger value="anime" className="flex items-center">
+              <Film className="h-4 w-4 mr-2" />
+              アニメ
             </TabsTrigger>
             <TabsTrigger value="fashion" className="flex items-center">
               <ShoppingBag className="h-4 w-4 mr-2" />
