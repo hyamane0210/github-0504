@@ -140,18 +140,19 @@ async function getTMDBImage(name: string, type: "person" | "media"): Promise<str
 // Get artist image (Spotify → TMDB → Wikipedia → Default)
 async function getArtistImage(name: string): Promise<string | null> {
   try {
-    // Parallel requests for better performance
-    const [spotifyImage, tmdbImage, wikiImage] = await Promise.allSettled([
-      getSpotifyArtistImage(name),
-      getTMDBImage(name, "person"),
-      getWikipediaImage(name)
-    ])
+    // Try Spotify first
+    const spotifyImage = await getSpotifyArtistImage(name)
+    if (spotifyImage) return spotifyImage
 
-    // Use the first successful result
-    if (spotifyImage.status === 'fulfilled' && spotifyImage.value) return spotifyImage.value
-    if (tmdbImage.status === 'fulfilled' && tmdbImage.value) return tmdbImage.value
-    if (wikiImage.status === 'fulfilled' && wikiImage.value) return wikiImage.value
+    // Then try TMDB
+    const tmdbImage = await getTMDBImage(name, "person")
+    if (tmdbImage) return tmdbImage
 
+    // Then try Wikipedia
+    const wikiImage = await getWikipediaImage(name)
+    if (wikiImage) return wikiImage
+
+    // Default image as last resort
     return "/placeholder.svg?height=400&width=400"
   } catch (error) {
     console.error("Error getting artist image:", error)
@@ -162,18 +163,22 @@ async function getArtistImage(name: string): Promise<string | null> {
   }
 }
 
-// Get person image (TMDB → Wikipedia → Default)
+// Get person image (TMDB → Spotify → Wikipedia → Default)
 async function getPersonImage(name: string): Promise<string | null> {
   try {
     // 1. Try TMDB
     const tmdbImage = await getTMDBImage(name, "person")
     if (tmdbImage) return tmdbImage
 
-    // 2. Try Wikipedia
+    // 2. Try Spotify
+    const spotifyImage = await getSpotifyArtistImage(name)
+    if (spotifyImage) return spotifyImage
+
+    // 3. Try Wikipedia
     const wikiImage = await getWikipediaImage(name)
     if (wikiImage) return wikiImage
 
-    // 3. Default image
+    // 4. Default image
     return "/placeholder.svg?height=400&width=400"
   } catch (error) {
     console.error("Error getting person image:", error)
