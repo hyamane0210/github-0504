@@ -21,14 +21,16 @@ interface RecommendationsData {
 const categoryMap: Record<string, keyof RecommendationsData> = {
   artists: "artists",
   celebrities: "celebrities",
-  media: "media",
+  movies: "movies",
+  anime: "anime",
   fashion: "fashion",
 }
 
 const categoryTitles: Record<string, string> = {
   artists: "アーティスト",
   celebrities: "芸能人/インフルエンサー",
-  media: "映画/アニメ",
+  movies: "映画",
+  anime: "アニメ",
   fashion: "ファッションブランド",
 }
 

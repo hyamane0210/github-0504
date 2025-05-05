@@ -186,8 +186,8 @@ async function getPersonImage(name: string): Promise<string | null> {
   }
 }
 
-// Get media image (TMDB → Wikipedia → Default)
-async function getMediaImage(name: string): Promise<string | null> {
+// Get movie image (TMDB → Wikipedia → Default)
+async function getMovieImage(name: string): Promise<string | null> {
   try {
     // 1. Try TMDB
     const tmdbImage = await getTMDBImage(name, "media")
@@ -317,6 +317,34 @@ export async function getRecommendations(query: string) {
     ])
 
     return {
+
+// Get anime image (TMDB → Wikipedia → Default)
+async function getAnimeImage(name: string): Promise<string | null> {
+  try {
+    // Try TMDB with specific anime type
+    const response = await fetch(`/api/tmdb?type=anime&query=${encodeURIComponent(name)}`)
+    if (response.ok) {
+      const data = await response.json()
+      const animeResult = data.results?.find((item: any) => 
+        item.media_type === 'tv' || item.media_type === 'movie'
+      )
+      
+      if (animeResult?.poster_path) {
+        return `${TMDB_IMAGE_BASE_URL}/${TMDB_IMAGE_SIZE}${animeResult.poster_path}`
+      }
+    }
+
+    // Try Wikipedia with anime validation
+    const wikiImage = await getWikipediaImage(name, ['アニメ', 'テレビアニメ', '劇場アニメ'])
+    if (wikiImage) return wikiImage
+
+    return "/placeholder.svg?height=400&width=400"
+  } catch (error) {
+    console.error("Error getting anime image:", error)
+    return "/placeholder.svg?height=400&width=400"
+  }
+}
+
       artists: processedArtists,
       celebrities: processedCelebrities,
       media: processedMedia,

@@ -1,3 +1,4 @@
+
 export interface RecommendationItem {
   name: string
   reason: string
@@ -9,13 +10,15 @@ export interface RecommendationItem {
 export interface RecommendationsData {
   artists: RecommendationItem[]
   celebrities: RecommendationItem[]
-  media: RecommendationItem[]
+  movies: RecommendationItem[]
+  anime: RecommendationItem[]
   fashion: RecommendationItem[]
 }
 
 export type CategoryMapping = {
   artists: string
   celebrities: string
-  media: string
+  movies: string
+  anime: string
   fashion: string
 }
