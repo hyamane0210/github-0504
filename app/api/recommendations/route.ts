@@ -21,10 +21,10 @@ export async function POST(request: Request) {
     }
 
     const { query, category } = await request.json()
-    
+
     // Generate cache key
     const cacheKey = `${query}-${category}`
-    
+
     // Check cache
     const cached = recommendationsCache.get(cacheKey)
     if (cached && Date.now() - cached.timestamp < CACHE_DURATION) {
@@ -103,7 +103,7 @@ export async function POST(request: Request) {
     })
 
     const result = JSON.parse(response.choices[0].message.content)
-    
+
     // Cache the result
     recommendationsCache.set(cacheKey, {
       data: result,

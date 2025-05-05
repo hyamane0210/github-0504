@@ -56,10 +56,22 @@ export default function RecommendedPage() {
   const [initialLoadDone, setInitialLoadDone] = useState(false)
 
   // 初期データの読み込み - アクティブなタブのみ最初に読み込む
+  const ITEMS_PER_BATCH = 5
+  
   useEffect(() => {
     if (!initialLoadDone) {
-      loadRecommendationsForTab(activeTab)
-      setInitialLoadDone(true)
+      const loadInitialBatch = async () => {
+        // アクティブタブの最初の5アイテムのみを読み込む
+        await loadRecommendationsForTab(activeTab, 0, ITEMS_PER_BATCH)
+        setInitialLoadDone(true)
+        
+        // 残りのアイテムを非同期で読み込む
+        setTimeout(() => {
+          loadRecommendationsForTab(activeTab, ITEMS_PER_BATCH)
+        }, 100)
+      }
+      
+      loadInitialBatch()
     }
   }, [activeTab, initialLoadDone])
 
