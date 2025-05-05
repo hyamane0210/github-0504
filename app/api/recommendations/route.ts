@@ -10,29 +10,20 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 })
 
-export async function POST(request: Request) {
+// バッチ処理用のキューを作成
+const processingQueue: { query: string; category: string; resolve: Function; }[] = []
+let isProcessing = false
+
+async function processBatch() {
+  if (isProcessing || processingQueue.length === 0) return
+
+  isProcessing = true
+  const currentBatch = processingQueue.splice(0, 5) // 最大5件ずつ処理
+
   try {
-    // Validate OpenAI API key
-    if (!process.env.OPENAI_API_KEY) {
-      return NextResponse.json(
-        { error: "OpenAI API key is not configured" },
-        { status: 500 }
-      )
-    }
-
-    const { query, category } = await request.json()
-    
-    // Generate cache key
-    const cacheKey = `${query}-${category}`
-    
-    // Check cache
-    const cached = recommendationsCache.get(cacheKey)
-    if (cached && Date.now() - cached.timestamp < CACHE_DURATION) {
-      return NextResponse.json(cached.data)
-    }
-
-    const prompt = `
-以下のアイテムに関連する${category}を10個提案してください。
+    const responses = await Promise.all(currentBatch.map(item => {
+      const prompt = `
+以下のアイテムに関連する${item.category}を10個提案してください。
 
 カテゴリー別の制限事項:
 - 音楽アーティストの場合:
@@ -67,7 +58,7 @@ export async function POST(request: Request) {
   * 同じジャンルやカテゴリーに属しているか
   * SNSやメディア等で推薦元アイテムへの好意（ファンであること等）を公言しているか
 
-アイテム: ${query}
+アイテム: ${item.query}
 
 注意事項:
 - 必ず日本語で回答してください
@@ -86,31 +77,77 @@ export async function POST(request: Request) {
   ]
 }
 `
+      return openai.chat.completions.create({
+        model: "gpt-3.5-turbo",
+        messages: [
+          {
+            role: "system",
+            content: "あなたはエンターテインメントと文化に関する専門家です。日本のユーザー向けに情報を提供します。",
+          },
+          {
+            role: "user",
+            content: prompt,
+          },
+        ],
+        response_format: { type: "json_object" },
+      })
+    }))
 
-    const response = await openai.chat.completions.create({
-      model: "gpt-3.5-turbo",
-      messages: [
-        {
-          role: "system",
-          content: "あなたはエンターテインメントと文化に関する専門家です。日本のユーザー向けに情報を提供します。",
-        },
-        {
-          role: "user",
-          content: prompt,
-        },
-      ],
-      response_format: { type: "json_object" },
+    responses.forEach((response, index) => {
+      currentBatch[index].resolve(response)
     })
+  } catch (error) {
+    currentBatch.forEach(item => item.resolve(null))
+  }
 
-    const result = JSON.parse(response.choices[0].message.content)
-    
-    // Cache the result
-    recommendationsCache.set(cacheKey, {
-      data: result,
-      timestamp: Date.now(),
+  isProcessing = false
+  if (processingQueue.length > 0) {
+    processBatch()
+  }
+}
+
+// バッチ処理を定期的に実行
+setInterval(processBatch, 1000)
+
+
+export async function POST(request: Request) {
+  try {
+    // Validate OpenAI API key
+    if (!process.env.OPENAI_API_KEY) {
+      return NextResponse.json(
+        { error: "OpenAI API key is not configured" },
+        { status: 500 }
+      )
+    }
+
+    const { query, category } = await request.json()
+
+    // Generate cache key
+    const cacheKey = `${query}-${category}`
+
+    // Check cache
+    const cached = recommendationsCache.get(cacheKey)
+    if (cached && Date.now() - cached.timestamp < CACHE_DURATION) {
+      return NextResponse.json(cached.data)
+    }
+
+    return new Promise((resolve) => {
+      processingQueue.push({ query, category, resolve });
+    }).then(response => {
+      const result = JSON.parse(response.choices[0].message.content);
+      // Cache the result
+      recommendationsCache.set(cacheKey, {
+        data: result,
+        timestamp: Date.now(),
+      })
+      return NextResponse.json(result);
+    }).catch(error => {
+      console.error("Error in recommendations API:", error)
+      return NextResponse.json(
+        { error: "Failed to get recommendations" },
+        { status: 500 }
+      )
     })
-
-    return NextResponse.json(result)
   } catch (error) {
     console.error("Error in recommendations API:", error)
     return NextResponse.json(
