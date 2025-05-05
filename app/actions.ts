@@ -75,10 +75,12 @@ async function getSpotifyToken(): Promise<void> {
   const now = Date.now()
 
   if (now < spotifyTokenExpirationTime && spotifyApi.getAccessToken()) {
+    console.debug("[Spotify] Using existing token")
     return
   }
 
   try {
+    console.debug("[Spotify] Requesting new token...")
     const data = await spotifyApi.clientCredentialsGrant()
     const accessToken = data.body["access_token"]
     
@@ -86,10 +88,14 @@ async function getSpotifyToken(): Promise<void> {
       throw new Error("No access token received")
     }
 
+    console.debug("[Spotify] New token received successfully")
     spotifyTokenExpirationTime = now + (data.body["expires_in"] - 60) * 1000
     spotifyApi.setAccessToken(accessToken)
   } catch (error) {
-    console.error("Failed to get Spotify token:", error)
+    console.error("[Spotify] Failed to get token:", error)
+    if (error instanceof Error) {
+      console.error("[Spotify] Error details:", error.message)
+    }
     throw error
   }
 }
@@ -99,15 +105,32 @@ async function getSpotifyArtistImage(name: string): Promise<string | null> {
   try {
     // Try Spotify first
     await getSpotifyToken()
+    console.debug(`[Spotify] Searching for artist: ${name}`)
+    
     const searchResult = await spotifyApi.searchArtists(name, { limit: 1 })
+    console.debug(`[Spotify] Search response:`, JSON.stringify(searchResult.body, null, 2))
     
     if (searchResult?.body?.artists?.items?.[0]) {
       const artist = searchResult.body.artists.items[0]
-      const artistImage = artist.images?.find(img => isValidImageUrl(img.url))
+      console.debug(`[Spotify] Found artist:`, artist.name)
+      
+      if (!artist.images || artist.images.length === 0) {
+        console.debug(`[Spotify] No images found for artist: ${artist.name}`)
+        return null
+      }
+      
+      // Sort images by size and find the first valid URL
+      const sortedImages = [...artist.images].sort((a, b) => (b.width || 0) - (a.width || 0))
+      const artistImage = sortedImages.find(img => isValidImageUrl(img.url))
+      
       if (artistImage) {
         console.debug(`[Spotify] Found image for ${name}:`, artistImage.url)
         return artistImage.url
+      } else {
+        console.debug(`[Spotify] No valid image URLs found for ${name}`)
       }
+    } else {
+      console.debug(`[Spotify] No artist found for: ${name}`)
     }
 
     // If Spotify fails, try LastFM
